@@ -183,7 +183,7 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
   </div>
   <div class="aimside">
     <h2>Aim your BOLT</h2>
-    <p>Drag the yellow knob around the ring until BOLT's <b class="blue">blue light</b> faces you.</p>
+    <p>Drag the yellow knob around the ring until BOLT's <b class="blue">blue tail light</b> faces you and the arrow on its screen points away from you.</p>
     <div class="deg" id="aimDeg">0°</div>
     <div class="row">
       <button class="btn small" id="aimL" aria-label="Nudge left">⟲</button>
@@ -253,7 +253,7 @@ async function pump(){
 const MODE={70:'🐢',130:'🐇',210:'🚀'};
 function show(speed,h){$('arrow').style.transform=`rotate(${h}deg)`;$('readout').textContent=`${MODE[maxSpeed]||''} ${speed>0?Math.round(speed/2.55)+'% power':'stopped'}`}
 const drive=(speed,h,rev=false)=>(show(speed,h),send(packet(SECONDARY,0x16,0x07,[Math.max(0,Math.min(255,speed|0)),(h>>8)&0xFF,h&0xFF,rev?1:0]),'drive'));
-const leds=(mask,vals)=>send(packet(SECONDARY,0x1A,0x1A,[0,0,0,mask,...vals]));
+const leds=(mask,vals)=>send(packet(PRIMARY,0x1A,0x1C,[mask,...vals]));   // set_all_leds_with_8_bit_mask: bits 0-2 front RGB, 3-5 back RGB
 const matrixFill=([r,g,b])=>send(packet(SECONDARY,0x1A,0x2F,[r,g,b]));
 const matrixRect=(x1,y1,x2,y2,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3E,[x1,y1,x2,y2,r,g,b]));
 const matrixPixel=(x,y,[r,g,b])=>send(packet(SECONDARY,0x1A,0x2D,[x,y,r,g,b]));
@@ -350,7 +350,8 @@ dial.addEventListener('pointermove',e=>{if(e.pointerId===aimPtr)setAim(dialAngle
 const dialUp=e=>{if(e.pointerId!==aimPtr)return;aimPtr=null;dial.classList.remove('drag')};
 dial.addEventListener('pointerup',dialUp);dial.addEventListener('pointercancel',dialUp);
 dial.addEventListener('keydown',e=>{const d={ArrowLeft:-5,ArrowDown:-5,ArrowRight:5,ArrowUp:5}[e.key];if(d){e.preventDefault();setAim(aimAngle+d)}});
-$('aim').onclick=()=>{aiming=true;aimBase=heading;setAim(0);leds(0x3F,[0,0,0,0,0,255]);matrixFill([0,0,0]);$('aimSheet').classList.add('show')};
+function aimArrow(){const c=[0,90,255];matrixFill([0,0,0]);matrixRect(3,2,4,7,c);matrixRect(3,0,4,0,c);matrixRect(2,1,5,1,c);matrixRect(1,2,6,2,c)}
+$('aim').onclick=()=>{aiming=true;aimBase=heading;setAim(0);leds(0x3F,[0,0,0,0,0,255]);aimArrow();$('aimSheet').classList.add('show')};
 const turn=d=>setAim(aimAngle+d);
 $('aimL').onclick=()=>turn(-10);$('aimR').onclick=()=>turn(10);
 $('aimDone').onclick=()=>{resetYaw();heading=0;aiming=false;showColor();$('aimSheet').classList.remove('show');toast('Aimed! Push the stick up to go forward.')};
