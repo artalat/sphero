@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BOLT">
+<meta name="theme-color" content="#1d1b4c">
+<title>BOLT Controller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE playful toy, IDEA a chunky handheld game controller, PICTURE the controller itself,
+   COLOUR night navy room + lemon shell + classic ABXY colours, TYPE Fredoka, LAYOUT top bar + two thumb zones */
+:root{--bg:#1d1b4c;--shell:#ffd23f;--shell2:#f4b400;--ink:#1d1b4c;--a:#3ecf6e;--b:#ff4d5e;--x:#3d8bff;--y:#ffb020;--pad:#2c2a63}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:var(--bg);color:#fff;font:600 16px/1.3 Fredoka,system-ui,sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none;position:fixed;inset:0;width:100%}
+.wrap{height:100%;display:flex;flex-direction:column;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));max-width:1280px;margin:0 auto}
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:14px;font:inherit;padding:10px 14px;min-height:44px;cursor:pointer;color:var(--ink);background:#fff;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#connect{background:var(--a);color:#06341a;font-size:18px}
+#connect.on{background:#fff}
+.status{flex:1;font-size:14px;opacity:.85;min-width:120px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff4d5e;margin-right:6px}
+.dot.on{background:#3ecf6e}
+.modes{display:flex;gap:6px}
+.modes .btn{padding:8px 12px;background:#3a3780;color:#fff}
+.modes .btn.sel{background:var(--shell);color:var(--ink)}
+.shell{flex:1;margin-top:12px;background:linear-gradient(170deg,var(--shell) 60%,var(--shell2));border-radius:48px;box-shadow:inset 0 -10px 0 rgba(0,0,0,.12),0 14px 0 rgba(0,0,0,.3);display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:16px;position:relative;gap:8px}
+.shoulder{position:absolute;top:-8px;width:28%;height:44px;border:0;border-radius:18px 18px 6px 6px;background:var(--pad);color:#fff;font:inherit;font-size:15px;cursor:pointer}
+.shoulder:active{background:#45429a}
+.sl{left:6%}.sr{right:6%}
+.zone{display:grid;place-items:center;height:100%}
+.stick{width:clamp(130px,min(40vw,36vmin),320px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 40%,#3a3780,var(--pad));box-shadow:inset 0 6px 14px rgba(0,0,0,.45);position:relative;touch-action:none}
+.knob{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;margin:-22% 0 0 -22%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff,#cfd3e6);box-shadow:0 6px 0 rgba(0,0,0,.35);transition:transform .12s}
+.knob.drag{transition:none}
+.mid{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--ink)}
+.swatch{width:clamp(46px,7vmin,72px);height:clamp(46px,7vmin,72px);border-radius:50%;border:4px solid var(--ink);background:#3d8bff;cursor:pointer}
+.screen{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--pad);border-radius:20px;padding:10px 12px;box-shadow:inset 0 4px 10px rgba(0,0,0,.4)}
+.swatch{position:relative;border-color:#fff!important;box-shadow:0 0 18px currentColor}
+.arrow{position:absolute;inset:0;transition:transform .15s}
+.arrow::before{content:"";position:absolute;left:50%;top:6%;border:solid transparent;border-width:0 7px 12px;border-bottom-color:#fff;transform:translateX(-50%)}
+.readout{color:#fff;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.small{font-size:13px;padding:8px 12px;min-height:40px;background:var(--pad);color:#fff}
+.abxy{position:relative;width:clamp(140px,min(42vw,38vmin),330px);aspect-ratio:1}
+.face{position:absolute;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:36%;aspect-ratio:1;border-radius:50%;border:0;font:700 clamp(20px,3.4vmin,36px) Fredoka,sans-serif;color:#fff;cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,.35);display:grid;place-items:center;line-height:1}
+.face small{font-size:clamp(10px,1.5vmin,15px);font-weight:500;opacity:.95}
+.face:active,.face.hit{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.fy{left:32%;top:0;background:var(--y)}.fx{left:0;top:32%;background:var(--x)}
+.fb{right:0;top:32%;background:var(--b)}.fa{left:32%;bottom:0;background:var(--a)}
+.sheet{position:fixed;inset:0;background:rgba(10,9,35,.7);display:none;place-items:center;padding:16px;z-index:5}
+.sheet.show{display:grid}
+.card{background:#fff;color:var(--ink);border-radius:24px;padding:20px;width:min(420px,100%);text-align:center}
+.card h2{margin:0 0 6px;font-size:24px}
+.card p{margin:0 0 14px;font-weight:500;font-size:15px}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.colors{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.colors button{aspect-ratio:1;border-radius:50%;border:3px solid var(--ink);cursor:pointer}
+input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border:3px solid var(--ink);border-radius:14px;margin-bottom:12px;user-select:text;-webkit-user-select:text}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#fff;color:var(--ink);padding:10px 16px;border-radius:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+@media (orientation:portrait) and (min-width:601px){.zone{align-self:end;height:auto;padding-bottom:4vh}.mid{align-self:center}.shell{grid-template-columns:1fr 1fr;grid-template-rows:1fr auto;border-radius:36px;padding-top:40px}.mid{grid-column:1/3;flex-direction:row;justify-content:center;order:-1}}
+/* iPad and other tablets */
+@media (min-width:700px) and (min-height:600px){
+  body{font-size:18px}
+  .top{gap:12px}
+  .btn{min-height:52px;padding:12px 18px;border-radius:16px}
+  #connect{font-size:20px}
+  .status{font-size:17px}.dot{width:12px;height:12px}
+  .modes .btn{font-size:24px;padding:8px 16px}
+  .shell{margin-top:28px;padding:32px clamp(24px,4vw,56px);border-radius:72px;gap:24px}
+  .shoulder{height:56px;top:-14px;font-size:18px;border-radius:24px 24px 8px 8px}
+  .small{font-size:16px;min-height:48px;padding:10px 16px}
+  .mid{gap:16px}
+  .card{width:min(520px,100%);padding:28px;border-radius:28px}
+  .card h2{font-size:30px}.card p{font-size:18px}
+  .colors{gap:16px}
+  .screen{padding:16px 20px;border-radius:26px;gap:10px}
+  .readout{font-size:16px}
+  .arrow::before{border-width:0 10px 16px}
+}
+@media (orientation:landscape) and (min-width:900px) and (min-height:600px){
+  .stick{width:clamp(200px,42vmin,380px)}
+  .abxy{width:clamp(210px,44vmin,400px)}
+  .swatch{width:clamp(72px,13vmin,130px);height:clamp(72px,13vmin,130px)}
+}
+/* iPad portrait: controller sits in the lower part of the screen, thumbs within reach */
+@media (orientation:portrait) and (min-width:700px){
+  .shell{padding-top:64px}
+  .mid{gap:20px;flex-wrap:wrap}
+  .mid>.btn{order:2}
+  .screen{flex-direction:row;padding:18px 28px;gap:20px}
+  .swatch{width:clamp(90px,16vmin,150px);height:clamp(90px,16vmin,150px)}
+  .readout{font-size:20px}
+  .stick{width:clamp(200px,40vmin,340px)}
+  .abxy{width:clamp(210px,42vmin,360px)}
+}
+/* iPhone / small phones held upright: turn the whole controller sideways so it is always landscape */
+@media (orientation:portrait) and (max-width:600px){
+  .wrap{position:fixed;top:0;left:0;width:100vh;width:100dvh;height:100vw;max-width:none;margin:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%);
+    padding:max(8px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom))}
+  .card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) rotate(90deg);width:min(420px,90vh);max-height:94vw;overflow:auto}
+}
+@media (orientation:portrait) and (max-width:600px){
+  .stick{width:clamp(120px,min(30vh,56vw),220px)!important}
+  .abxy{width:clamp(130px,min(32vh,58vw),230px)!important}
+}
+/* phones in landscape (real or turned): tighter top bar so the controller gets the room */
+@media (max-height:500px) and (orientation:landscape),(orientation:portrait) and (max-width:600px){
+  .top{flex-wrap:nowrap}
+  .btn{min-height:40px;padding:6px 12px}
+  #connect{font-size:16px}
+  .modes .btn{padding:6px 10px}
+  .shell{margin-top:12px;padding:14px 18px;border-radius:40px}
+  .shoulder{height:36px;top:-10px;font-size:13px}
+  .stick{width:clamp(120px,min(30vw,64vmin),220px)}
+  .abxy{width:clamp(130px,min(32vw,66vmin),230px)}
+  .swatch{width:52px;height:52px}
+  .mid{gap:8px}
+}
+/* aim dial */
+.aimcard{display:flex;flex-direction:column;align-items:center;gap:14px}
+.aimside{display:flex;flex-direction:column;align-items:center}
+.aimside p{margin-bottom:8px}
+.blue{color:#1f6bff}
+.dial{--d:clamp(200px,58vmin,320px);position:relative;width:var(--d);height:var(--d);border-radius:50%;background:radial-gradient(circle,#fff 0 47%,var(--pad) 48% 100%);box-shadow:inset 0 6px 14px rgba(0,0,0,.4),0 6px 0 rgba(0,0,0,.18);touch-action:none;cursor:grab;flex:none}
+.dial:focus-visible{outline:4px solid var(--x);outline-offset:4px}
+.ticks{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ball{position:absolute;inset:24%;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ffffff,#d9dcea 70%,#b9bdd3);box-shadow:0 8px 16px rgba(0,0,0,.25);transition:transform .08s}
+.fwd{position:absolute;left:50%;top:9%;transform:translateX(-50%);border:solid transparent;border-width:0 10px 14px;border-bottom-color:var(--ink);opacity:.8}
+.tail{position:absolute;left:50%;bottom:6%;width:20%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:#2f7bff;box-shadow:0 0 14px 6px rgba(47,123,255,.75)}
+.arm{position:absolute;inset:0;pointer-events:none;transition:transform .08s}
+.grip{position:absolute;left:50%;top:1.5%;width:19%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:var(--shell);border:4px solid #fff;box-shadow:0 4px 0 rgba(0,0,0,.35);display:grid;place-items:center;font-size:clamp(14px,3vmin,22px);color:var(--ink)}
+.dial.drag,.dial.drag .ball,.dial.drag .arm{transition:none;cursor:grabbing}
+.deg{font-size:28px;font-weight:700;margin-bottom:10px;font-variant-numeric:tabular-nums}
+@media (min-width:700px) and (min-height:600px){.aimcard{width:min(760px,100%)!important;flex-direction:row;gap:32px;text-align:left}.aimside{align-items:flex-start}.dial{--d:clamp(260px,42vmin,360px)}.deg{font-size:36px}}
+@media (max-height:500px) and (orientation:landscape){.aimcard{width:min(620px,94vw)!important;flex-direction:row;padding:16px;gap:18px}.dial{--d:min(62vh,240px)}.card h2{font-size:20px}.card p{font-size:14px}.deg{font-size:22px;margin-bottom:6px}}
+@media (orientation:portrait) and (max-width:600px){.aimcard{width:min(620px,94vh)!important;flex-direction:row;padding:16px;gap:18px}.dial{--d:min(62vw,240px)}.card h2{font-size:20px}.card p{font-size:14px}.deg{font-size:22px;margin-bottom:6px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="btn" id="connect">Connect BOLT</button>
+    <div class="status"><span class="dot" id="dot"></span><span id="stat">Not connected</span></div>
+    <div class="modes" id="modes">
+      <button class="btn" data-s="70">🐢</button>
+      <button class="btn sel" data-s="130">🐇</button>
+      <button class="btn" data-s="210">🚀</button>
+    </div>
+  </div>
+  <div class="shell">
+    <button class="shoulder sl" id="L">L · spin</button>
+    <button class="shoulder sr" id="R">R · spin</button>
+    <div class="zone"><div class="stick" id="stick"><div class="knob" id="knob"></div></div></div>
+    <div class="mid">
+      <div class="screen">
+        <button class="swatch" id="swatch" aria-label="Pick colour"><span class="arrow" id="arrow"></span></button>
+        <div class="readout" id="readout">Ready</div>
+      </div>
+      <button class="btn small" id="aim">🎯 Aim</button>
+      <button class="btn small" id="msg">💬 Message</button>
+    </div>
+    <div class="zone"><div class="abxy">
+      <button class="face fy" id="Y">Y<small>face</small></button>
+      <button class="face fx" id="X">X<small>colour</small></button>
+      <button class="face fb" id="B">B<small>stop</small></button>
+      <button class="face fa" id="A">A<small>boost</small></button>
+    </div></div>
+  </div>
+</div>
+
+<div class="sheet" id="aimSheet"><div class="card aimcard">
+  <div class="dial" id="dial" role="slider" aria-label="Aim direction" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" tabindex="0">
+    <svg class="ticks" id="ticks" viewBox="0 0 200 200" aria-hidden="true"></svg>
+    <div class="ball" id="aimBall"><span class="fwd"></span><span class="tail"></span></div>
+    <div class="arm" id="arm"><span class="grip">⟷</span></div>
+  </div>
+  <div class="aimside">
+    <h2>Aim your BOLT</h2>
+    <p>Drag the yellow knob around the ring until BOLT's <b class="blue">blue light</b> faces you.</p>
+    <div class="deg" id="aimDeg">0°</div>
+    <div class="row">
+      <button class="btn small" id="aimL" aria-label="Nudge left">⟲</button>
+      <button class="btn small" id="aimR" aria-label="Nudge right">⟳</button>
+      <button class="btn" id="aimDone" style="background:var(--a)">Done</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="sheet" id="colSheet"><div class="card">
+  <h2>Pick a colour</h2>
+  <div class="colors" id="colors"></div>
+  <button class="btn small" id="colClose">Close</button>
+</div></div>
+
+<div class="sheet" id="msgSheet"><div class="card">
+  <h2>Scroll a message</h2>
+  <p>It will scroll across BOLT's lights.</p>
+  <input type="text" id="msgText" maxlength="24" value="HI!">
+  <div class="row"><button class="btn" id="msgGo" style="background:var(--a)">Send</button><button class="btn small" id="msgClose">Close</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const UUID=s=>`000${s}-574f-4f20-5370-6865726f2121`;
+const SVC_API=UUID('10001'),CHR_API=UUID('10002'),SVC_DOS=UUID('20001'),CHR_DOS=UUID('20005');
+const PRIMARY=0x11,SECONDARY=0x12;
+let dev=null,api=null,seq=0,queue=[],busy=false;
+let heading=0,maxSpeed=130,boostUntil=0,color=[61,139,255],aiming=false,faceIdx=0;
+
+const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)};
+const setStatus=(on,t)=>{$('dot').classList.toggle('on',on);$('stat').textContent=t;$('connect').classList.toggle('on',on);$('connect').textContent=on?'Disconnect':'Connect BOLT'};
+
+/* ---- Sphero API v2 packets ---- */
+function packet(target,did,cid,data=[]){
+  const body=[0x1A,target,did,cid,(seq=(seq+1)&0xFF),...data];
+  const sum=body.reduce((a,b)=>a+b,0);
+  body.push((~sum)&0xFF);
+  const out=[0x8D];
+  for(const b of body){
+    if(b===0xAB)out.push(0xAB,0x23);else if(b===0x8D)out.push(0xAB,0x05);else if(b===0xD8)out.push(0xAB,0x50);else out.push(b);
+  }
+  out.push(0xD8);return new Uint8Array(out);
+}
+function send(bytes,tag){
+  if(!api)return;
+  if(tag){const i=queue.findIndex(q=>q.tag===tag);if(i>=0){queue[i].bytes=bytes;return}}
+  if(queue.length>40)queue.shift();
+  queue.push({bytes,tag});pump();
+}
+async function pump(){
+  if(busy)return;busy=true;
+  try{
+    while(queue.length&&api){
+      const {bytes}=queue.shift();
+      for(let i=0;i<bytes.length;i+=20){
+        const c=bytes.slice(i,i+20);
+        await (api.writeValueWithResponse?api.writeValueWithResponse(c):api.writeValue(c));
+      }
+    }
+  }catch(e){console.warn(e)}
+  busy=false;
+}
+const MODE={70:'🐢',130:'🐇',210:'🚀'};
+function show(speed,h){$('arrow').style.transform=`rotate(${h}deg)`;$('readout').textContent=`${MODE[maxSpeed]||''} ${speed>0?Math.round(speed/2.55)+'% power':'stopped'}`}
+const drive=(speed,h,rev=false)=>(show(speed,h),send(packet(SECONDARY,0x16,0x07,[Math.max(0,Math.min(255,speed|0)),(h>>8)&0xFF,h&0xFF,rev?1:0]),'drive'));
+const leds=(mask,vals)=>send(packet(SECONDARY,0x1A,0x1A,[0,0,0,mask,...vals]));
+const matrixFill=([r,g,b])=>send(packet(SECONDARY,0x1A,0x2F,[r,g,b]));
+const matrixRect=(x1,y1,x2,y2,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3E,[x1,y1,x2,y2,r,g,b]));
+const matrixPixel=(x,y,[r,g,b])=>send(packet(SECONDARY,0x1A,0x2D,[x,y,r,g,b]));
+const scrollText=(txt,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3B,[r,g,b,10,0,...[...txt].map(c=>c.charCodeAt(0)&0x7F),0]));
+const resetYaw=()=>send(packet(SECONDARY,0x16,0x06));
+function showColor(){leds(0x3F,[...color,...color]);matrixFill(color);const c=`rgb(${color})`;$('swatch').style.background=c;$('swatch').style.color=c}
+
+/* ---- Connect ---- */
+async function connect(){
+  if(!navigator.bluetooth){toast('This browser can\'t do Bluetooth. Use Chrome (Android/PC/Mac) or Bluefy on iPhone/iPad.');return}
+  try{
+    setStatus(false,'Looking for BOLT…');
+    dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'SB-'}],optionalServices:[SVC_API,SVC_DOS]});
+    dev.addEventListener('gattserverdisconnected',()=>{api=null;queue=[];setStatus(false,'Disconnected')});
+    setStatus(false,'Connecting…');
+    const gatt=await dev.gatt.connect();
+    const dos=await (await gatt.getPrimaryService(SVC_DOS)).getCharacteristic(CHR_DOS);
+    await dos.writeValue(new TextEncoder().encode('usetheforce...band'));
+    api=await (await gatt.getPrimaryService(SVC_API)).getCharacteristic(CHR_API);
+    await api.startNotifications();
+    send(packet(PRIMARY,0x13,0x0D));               // wake
+    await new Promise(r=>setTimeout(r,600));
+    showColor();
+    setStatus(true,`${dev.name} ready!`);toast('Connected! Tap 🎯 Aim first.');
+  }catch(e){setStatus(false,'Not connected');if(e.name!=='NotFoundError')toast('Could not connect: '+e.message)}
+}
+function tryLock(){try{const d=document.documentElement;if(screen.orientation&&screen.orientation.lock&&d.requestFullscreen&&!document.fullscreenElement&&matchMedia('(pointer:coarse)').matches)d.requestFullscreen().then(()=>screen.orientation.lock('landscape')).catch(()=>{})}catch(e){}}
+$('connect').onclick=()=>{tryLock();if(dev&&dev.gatt.connected){drive(0,heading);setTimeout(()=>dev.gatt.disconnect(),300)}else connect()};
+
+/* ---- Joystick ---- */
+const turned=matchMedia('(orientation:portrait) and (max-width:600px)');
+const stick=$('stick'),knob=$('knob');let active=null,vec={x:0,y:0},timer=null;
+function sendDrive(){
+  const m=Math.min(1,Math.hypot(vec.x,vec.y));
+  if(m<0.15){drive(0,heading);return}
+  heading=Math.round((Math.atan2(vec.x,-vec.y)*180/Math.PI+360)%360);
+  const top=Date.now()<boostUntil?255:maxSpeed;
+  drive(m*top,heading);
+}
+function moveTo(e){
+  const r=stick.getBoundingClientRect(),R=r.width/2;
+  let sx=(e.clientX-r.left-R)/R,sy=(e.clientY-r.top-R)/R;
+  let x=sx,y=sy;if(turned.matches){x=sy;y=-sx}   /* undo the 90° turn on phones */const m=Math.hypot(x,y);if(m>1){x/=m;y/=m}
+  vec={x,y};knob.style.transform=`translate(${x*R*0.6}px,${y*R*0.6}px)`;
+}
+stick.addEventListener('pointerdown',e=>{if(aiming)return;active=e.pointerId;stick.setPointerCapture(e.pointerId);knob.classList.add('drag');moveTo(e);sendDrive();timer=setInterval(sendDrive,100)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===active)moveTo(e)});
+const release=e=>{if(e.pointerId!==active)return;active=null;clearInterval(timer);vec={x:0,y:0};knob.classList.remove('drag');knob.style.transform='';drive(0,heading)};
+stick.addEventListener('pointerup',release);stick.addEventListener('pointercancel',release);
+
+/* ---- Buttons ---- */
+const PALETTE=[[255,40,40],[255,140,0],[255,220,0],[40,220,80],[0,200,255],[61,139,255],[170,60,255],[255,80,200]];
+const FACES=[
+  c=>{matrixFill([0,0,0]);[[2,2],[5,2]].forEach(([x,y])=>matrixPixel(x,y,c));[[1,5],[6,5]].forEach(([x,y])=>matrixPixel(x,y,c));matrixRect(2,6,5,6,c)},        // smile
+  c=>{matrixFill([0,0,0]);matrixRect(1,1,2,2,c);matrixRect(5,1,6,2,c);matrixRect(0,2,7,3,c);matrixRect(1,4,6,4,c);matrixRect(2,5,5,5,c);matrixRect(3,6,4,6,c)}, // heart
+  c=>{matrixFill([0,0,0]);matrixRect(3,0,4,7,c);matrixRect(0,3,7,4,c);[[1,1],[6,1],[1,6],[6,6]].forEach(([x,y])=>matrixPixel(x,y,c))}                       // sparkle
+];
+const actions={
+  A(){boostUntil=Date.now()+1200;toast('🚀 BOOST!');if(Math.hypot(vec.x,vec.y)>0.15)sendDrive()},
+  B(){boostUntil=0;drive(0,heading);toast('🛑 Stop')},
+  X(){color=PALETTE[(PALETTE.findIndex(p=>p+''==color+'')+1)%PALETTE.length];showColor()},
+  Y(){FACES[faceIdx++%FACES.length](color)},
+  L(){spin(-1)},R(){spin(1)}
+};
+function spin(dir){let i=0;const s=setInterval(()=>{heading=(heading+dir*45+360)%360;drive(0,heading);if(++i>=8)clearInterval(s)},90)}
+['A','B','X','Y','L','R'].forEach(k=>$(k).addEventListener('pointerdown',()=>actions[k]()));
+
+$('modes').onclick=e=>{const b=e.target.closest('button');if(!b)return;maxSpeed=+b.dataset.s;[...$('modes').children].forEach(c=>c.classList.toggle('sel',c===b));show(0,heading)};
+
+/* colour sheet */
+$('colors').innerHTML=PALETTE.map((p,i)=>`<button data-i="${i}" style="background:rgb(${p})" aria-label="colour ${i+1}"></button>`).join('');
+$('swatch').onclick=()=>$('colSheet').classList.add('show');
+$('colors').onclick=e=>{const b=e.target.closest('button');if(!b)return;color=PALETTE[+b.dataset.i];showColor();$('colSheet').classList.remove('show')};
+$('colClose').onclick=()=>$('colSheet').classList.remove('show');
+
+/* message sheet */
+$('msg').onclick=()=>$('msgSheet').classList.add('show');
+$('msgClose').onclick=()=>$('msgSheet').classList.remove('show');
+$('msgGo').onclick=()=>{const t=$('msgText').value.trim().slice(0,24);if(t)scrollText(t+' ',color);$('msgSheet').classList.remove('show')};
+
+/* aim — circular dial like the Sphero app */
+function localVec(e,el){const r=el.getBoundingClientRect(),R=r.width/2;const sx=(e.clientX-r.left-R)/R,sy=(e.clientY-r.top-R)/R;return turned.matches?{x:sy,y:-sx}:{x:sx,y:sy}}
+const dial=$('dial');let aimBase=0,aimAngle=0,aimPtr=null;
+$('ticks').innerHTML=Array.from({length:72},(_,i)=>{const big=i%6===0,a=i*5*Math.PI/180,r1=big?84:89,r2=96;return `<line x1="${100+r1*Math.sin(a)}" y1="${100-r1*Math.cos(a)}" x2="${100+r2*Math.sin(a)}" y2="${100-r2*Math.cos(a)}" stroke="#fff" stroke-opacity="${big?.9:.35}" stroke-width="${big?2.4:1.2}" stroke-linecap="round"/>`}).join('');
+function setAim(a){
+  aimAngle=((Math.round(a)%360)+360)%360;
+  $('arm').style.transform=$('aimBall').style.transform=`rotate(${aimAngle}deg)`;
+  $('aimDeg').textContent=aimAngle+'°';dial.setAttribute('aria-valuenow',aimAngle);
+  heading=(aimBase+aimAngle)%360;drive(0,heading);
+}
+const dialAngle=e=>{const v=localVec(e,dial);return Math.atan2(v.x,-v.y)*180/Math.PI};
+dial.addEventListener('pointerdown',e=>{aimPtr=e.pointerId;dial.setPointerCapture(e.pointerId);dial.classList.add('drag');setAim(dialAngle(e))});
+dial.addEventListener('pointermove',e=>{if(e.pointerId===aimPtr)setAim(dialAngle(e))});
+const dialUp=e=>{if(e.pointerId!==aimPtr)return;aimPtr=null;dial.classList.remove('drag')};
+dial.addEventListener('pointerup',dialUp);dial.addEventListener('pointercancel',dialUp);
+dial.addEventListener('keydown',e=>{const d={ArrowLeft:-5,ArrowDown:-5,ArrowRight:5,ArrowUp:5}[e.key];if(d){e.preventDefault();setAim(aimAngle+d)}});
+$('aim').onclick=()=>{aiming=true;aimBase=heading;setAim(0);leds(0x3F,[0,0,0,0,0,255]);matrixFill([0,0,0]);$('aimSheet').classList.add('show')};
+const turn=d=>setAim(aimAngle+d);
+$('aimL').onclick=()=>turn(-10);$('aimR').onclick=()=>turn(10);
+$('aimDone').onclick=()=>{resetYaw();heading=0;aiming=false;showColor();$('aimSheet').classList.remove('show');toast('Aimed! Push the stick up to go forward.')};
+
+/* ---- Real game controller (Xbox / PlayStation / Switch Pro via Bluetooth or USB) ---- */
+let prev=[],padDriving=false;
+const MAP={0:'A',1:'B',2:'X',3:'Y',4:'L',5:'R'};
+function poll(){
+  const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(Boolean);
+  if(gp){
+    gp.buttons.forEach((b,i)=>{
+      if(b.pressed&&!prev[i]){
+        if(MAP[i]&&!aiming){actions[MAP[i]]();const el=$(MAP[i]);el.classList.add('hit');setTimeout(()=>el.classList.remove('hit'),150)}
+        if(i===9)$('aim').click();
+        if(aiming&&i===14)turn(-10);if(aiming&&i===15)turn(10);if(aiming&&i===0)$('aimDone').click();
+      }
+      prev[i]=b.pressed;
+    });
+    if(aiming&&aimPtr===null){const ax=gp.axes[2]??0,ay=gp.axes[3]??0,lx=gp.axes[0]||0,ly=gp.axes[1]||0;const [x,y]=Math.hypot(ax,ay)>0.6?[ax,ay]:[lx,ly];if(Math.hypot(x,y)>0.6){const a=((Math.round(Math.atan2(x,-y)*180/Math.PI))+360)%360;if(a!==aimAngle)setAim(a)}}
+    if(active===null&&!aiming){
+      const x=gp.axes[0]||0,y=gp.axes[1]||0,m=Math.hypot(x,y);
+      if(m>0.2){vec={x,y};padDriving=true;knob.style.transform=`translate(${x*stick.clientWidth*0.3}px,${y*stick.clientWidth*0.3}px)`}
+      else if(padDriving){padDriving=false;vec={x:0,y:0};knob.style.transform='';drive(0,heading)}
+    }
+  }
+  requestAnimationFrame(poll);
+}
+setInterval(()=>{if(padDriving&&active===null)sendDrive()},100);
+window.addEventListener('gamepadconnected',e=>toast('🎮 Controller connected!'));
+poll();
+}
+</script>
+</body>
+</html>
