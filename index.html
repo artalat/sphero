@@ -103,7 +103,8 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
 /* iPhone / small phones held upright: turn the whole controller sideways so it is always landscape */
 @media (orientation:portrait) and (max-width:600px){
   .wrap{position:fixed;top:0;left:0;width:100vh;width:100dvh;height:100vw;max-width:none;margin:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%);
-    padding:max(8px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom))}
+    /* rotated 90deg clockwise: local top=screen right, local right=screen bottom, local bottom=screen left, local left=screen top */
+    padding:max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)) max(12px,env(safe-area-inset-top))}
   .card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) rotate(90deg);width:min(420px,90vh);max-height:94vw;overflow:auto}
 }
 @media (orientation:portrait) and (max-width:600px){
@@ -150,6 +151,23 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
 .auto{margin-bottom:12px;background:var(--x)!important}
 @media (min-width:700px) and (min-height:600px){.tog{width:64px;min-height:58px;font-size:22px}.tog small{font-size:12px}}
 @media (max-height:500px) and (orientation:landscape),(orientation:portrait) and (max-width:600px){.tog{width:44px;min-height:40px;font-size:15px}.tog small{font-size:9px}.auto{margin-bottom:6px}}
+/* iPhone upright (controller turned sideways): compact middle, slimmer shoulders, sticks sized to the real space */
+@media (orientation:portrait) and (max-width:600px){
+  .top{gap:6px}
+  .status{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .shell{margin-top:16px;padding:22px 14px 12px;border-radius:34px;gap:6px}
+  .shoulder{width:20%;height:30px;top:-12px;font-size:12px;border-radius:14px 14px 6px 6px}
+  .sl{left:8%}.sr{right:8%}
+  .stick{width:clamp(110px,min(calc((100dvh - 290px)/2),calc(100vw - 150px)),240px)!important}
+  .abxy{width:clamp(120px,min(calc((100dvh - 270px)/2),calc(100vw - 140px)),250px)!important}
+  .mid{display:grid;grid-template-columns:auto auto;gap:6px;justify-items:stretch;align-items:center}
+  .mid>.screen{grid-column:1/3;flex-direction:row;padding:6px 10px;gap:8px;border-radius:16px}
+  .mid>.togs{grid-column:1/3;justify-content:center}
+  .mid>.small{min-height:38px;padding:6px 8px;font-size:12px}
+  .swatch{width:40px!important;height:40px!important;border-width:3px}
+  .readout{font-size:11px}
+  .toast{left:auto;right:auto;bottom:auto;top:50%;left:max(16px,env(safe-area-inset-left));transform:translate(-30%,-50%) rotate(90deg);max-width:80vh}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
