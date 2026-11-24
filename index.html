@@ -276,7 +276,7 @@ const matrixRect=(x1,y1,x2,y2,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3E,[x1,y1,x
 const matrixPixel=(x,y,[r,g,b])=>send(packet(SECONDARY,0x1A,0x2D,[x,y,r,g,b]));
 const scrollText=(txt,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3B,[r,g,b,10,0,...[...txt].map(c=>c.charCodeAt(0)&0x7F),0]));
 const resetYaw=()=>send(packet(SECONDARY,0x16,0x06));
-function showColor(){meterLevel=-1;leds(0x3F,[0,0,0,0,0,0]);if(feat.night&&isDark)matrixFill([255,200,120]);else matrixFill(color);const c=`rgb(${color})`;$('swatch').style.background=c;$('swatch').style.color=c}
+function showColor(){meterLevel=-1;leds(0x3F,[0,0,0,0,0,0]);if(feat.night&&isDark){matrixFill([255,200,120]);glowAt=Date.now();glowLux=null}else matrixFill(color);const c=`rgb(${color})`;$('swatch').style.background=c;$('swatch').style.color=c}
 
 /* ---- Connect ---- */
 async function connect(){
@@ -443,18 +443,28 @@ function onCrash(){
 }
 
 /* --- night light --- */
-let luxTimer=null;
+let luxTimer=null,glowAt=0,glowLux=null,brightCount=0;
+// BOLT's light sensor sits right under its LED screen, so once the warm glow is on the sensor
+// partly "sees" its own light. Measure that self-lit level after the glow settles and only
+// switch off when the room gets clearly brighter than it, several readings in a row.
 function onLux(lux){
   if(!feat.night)return;
-  const was=isDark;
-  if(lux<10)isDark=true;else if(lux>30)isDark=false;
   $('tNight').title=`Night light · ${Math.round(lux)} lux`;
-  if(was!==isDark&&!aiming&&!crashBusy){showColor();toast(isDark?'🌙 Dark! Night light on':'☀️ Bright again')}
+  if(aiming||crashBusy)return;
+  if(!isDark){
+    if(lux<10){isDark=true;brightCount=0;showColor();toast('🌙 Dark! Night light on')}
+    return;
+  }
+  if(Date.now()-glowAt<2500)return;                       // let the glow settle before calibrating
+  if(glowLux===null||lux<glowLux)glowLux=lux;              // baseline = darkest reading with glow on
+  if(lux>Math.max(30,glowLux*2+40)){
+    if(++brightCount>=3){isDark=false;brightCount=0;glowLux=null;showColor();toast('☀️ Bright again')}
+  }else brightCount=0;
 }
 function setNight(on){
   feat.night=on;clearInterval(luxTimer);
   if(on){luxTimer=setInterval(()=>send(packet(SECONDARY,0x18,0x30),'lux'),1500);toast('🌙 Night light: BOLT glows when the room gets dark')}
-  else{isDark=false;if(!aiming)showColor()}
+  else{isDark=false;glowLux=null;brightCount=0;if(!aiming)showColor()}
 }
 
 /* --- speed meter (BOLT streams its real velocity) --- */
