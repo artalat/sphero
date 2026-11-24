@@ -91,8 +91,9 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
 /* iPad portrait: controller sits in the lower part of the screen, thumbs within reach */
 @media (orientation:portrait) and (min-width:700px){
   .shell{padding-top:64px}
-  .mid{gap:20px;flex-wrap:wrap}
-  .mid>.btn{order:2}
+  .mid{display:grid!important;grid-template-columns:auto auto auto;column-gap:16px;row-gap:14px;justify-content:center;align-items:center}
+  .mid>.screen{grid-row:1/3}
+  .mid>.togs{grid-column:2/4;justify-content:center}
   .screen{flex-direction:row;padding:18px 28px;gap:20px}
   .swatch{width:clamp(90px,16vmin,150px);height:clamp(90px,16vmin,150px)}
   .readout{font-size:20px}
@@ -140,6 +141,15 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
 @media (min-width:700px) and (min-height:600px){.aimcard{width:min(760px,100%)!important;flex-direction:row;gap:32px;text-align:left}.aimside{align-items:flex-start}.dial{--d:clamp(260px,42vmin,360px)}.deg{font-size:36px}}
 @media (max-height:500px) and (orientation:landscape){.aimcard{width:min(620px,94vw)!important;flex-direction:row;padding:16px;gap:18px}.dial{--d:min(62vh,240px)}.card h2{font-size:20px}.card p{font-size:14px}.deg{font-size:22px;margin-bottom:6px}}
 @media (orientation:portrait) and (max-width:600px){.aimcard{width:min(620px,94vh)!important;flex-direction:row;padding:16px;gap:18px}.dial{--d:min(62vw,240px)}.card h2{font-size:20px}.card p{font-size:14px}.deg{font-size:22px;margin-bottom:6px}}
+/* feature toggles */
+.togs{display:flex;gap:6px}
+.tog{width:52px;min-height:48px;border:0;border-radius:14px;background:var(--pad);color:#fff;font:inherit;font-size:18px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.tog small{font-size:10px}
+.tog[aria-pressed=true]{background:var(--a);color:#06341a}
+.tog:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.auto{margin-bottom:12px;background:var(--x)!important}
+@media (min-width:700px) and (min-height:600px){.tog{width:64px;min-height:58px;font-size:22px}.tog small{font-size:12px}}
+@media (max-height:500px) and (orientation:landscape),(orientation:portrait) and (max-width:600px){.tog{width:44px;min-height:40px;font-size:15px}.tog small{font-size:9px}.auto{margin-bottom:6px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -165,6 +175,11 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
       </div>
       <button class="btn small" id="aim">🎯 Aim</button>
       <button class="btn small" id="msg">💬 Message</button>
+      <div class="togs">
+        <button class="tog" id="tNight" aria-pressed="false" title="Night light">🌙<small>Night</small></button>
+        <button class="tog" id="tSpeed" aria-pressed="false" title="Speed meter">📈<small>Speed</small></button>
+        <button class="tog" id="tTilt" aria-pressed="false" title="Tilt to steer">📱<small>Tilt</small></button>
+      </div>
     </div>
     <div class="zone"><div class="abxy">
       <button class="face fy" id="Y">Y<small>face</small></button>
@@ -185,6 +200,7 @@ input[type=text]{font:inherit;font-size:18px;width:100%;padding:10px 12px;border
     <h2>Aim your BOLT</h2>
     <p>Drag the yellow knob around the ring until BOLT's <b class="blue">blue tail light</b> faces you and the white arrow on its screen points away from you.</p>
     <div class="deg" id="aimDeg">0°</div>
+    <button class="btn small auto" id="autoAim">🧭 Auto-aim</button>
     <div class="row">
       <button class="btn small" id="aimL" aria-label="Nudge left">⟲</button>
       <button class="btn small" id="aimR" aria-label="Nudge right">⟳</button>
@@ -215,6 +231,7 @@ const UUID=s=>`000${s}-574f-4f20-5370-6865726f2121`;
 const SVC_API=UUID('10001'),CHR_API=UUID('10002'),SVC_DOS=UUID('20001'),CHR_DOS=UUID('20005');
 const PRIMARY=0x11,SECONDARY=0x12;
 let dev=null,api=null,seq=0,queue=[],busy=false;
+const feat={night:false,speed:false,tilt:false};let isDark=false,crashBusy=false,meterLevel=-1;
 let heading=0,maxSpeed=130,boostUntil=0,color=[61,139,255],aiming=false,faceIdx=0;
 
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)};
@@ -251,7 +268,7 @@ async function pump(){
   busy=false;
 }
 const MODE={70:'🐢',130:'🐇',210:'🚀'};
-function show(speed,h){$('arrow').style.transform=`rotate(${h}deg)`;$('readout').textContent=`${MODE[maxSpeed]||''} ${speed>0?Math.round(speed/2.55)+'% power':'stopped'}`}
+function show(speed,h){$('arrow').style.transform=`rotate(${h}deg)`;if(feat.speed)return;$('readout').textContent=`${MODE[maxSpeed]||''} ${speed>0?Math.round(speed/2.55)+'% power':'stopped'}`}
 const drive=(speed,h,rev=false)=>(show(speed,h),send(packet(SECONDARY,0x16,0x07,[Math.max(0,Math.min(255,speed|0)),(h>>8)&0xFF,h&0xFF,rev?1:0]),'drive'));
 const leds=(mask,vals)=>send(packet(PRIMARY,0x1A,0x1C,[mask,...vals]));   // set_all_leds_with_8_bit_mask: bits 0-2 front RGB, 3-5 back RGB
 const matrixFill=([r,g,b])=>send(packet(SECONDARY,0x1A,0x2F,[r,g,b]));
@@ -259,7 +276,7 @@ const matrixRect=(x1,y1,x2,y2,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3E,[x1,y1,x
 const matrixPixel=(x,y,[r,g,b])=>send(packet(SECONDARY,0x1A,0x2D,[x,y,r,g,b]));
 const scrollText=(txt,[r,g,b])=>send(packet(SECONDARY,0x1A,0x3B,[r,g,b,10,0,...[...txt].map(c=>c.charCodeAt(0)&0x7F),0]));
 const resetYaw=()=>send(packet(SECONDARY,0x16,0x06));
-function showColor(){leds(0x3F,[0,0,0,0,0,0]);matrixFill(color);const c=`rgb(${color})`;$('swatch').style.background=c;$('swatch').style.color=c}
+function showColor(){meterLevel=-1;leds(0x3F,[0,0,0,0,0,0]);if(feat.night&&isDark)matrixFill([255,200,120]);else matrixFill(color);const c=`rgb(${color})`;$('swatch').style.background=c;$('swatch').style.color=c}
 
 /* ---- Connect ---- */
 async function connect(){
@@ -273,10 +290,13 @@ async function connect(){
     const dos=await (await gatt.getPrimaryService(SVC_DOS)).getCharacteristic(CHR_DOS);
     await dos.writeValue(new TextEncoder().encode('usetheforce...band'));
     api=await (await gatt.getPrimaryService(SVC_API)).getCharacteristic(CHR_API);
+    api.addEventListener('characteristicvaluechanged',onNotify);
     await api.startNotifications();
     send(packet(PRIMARY,0x13,0x0D));               // wake
     await new Promise(r=>setTimeout(r,600));
+    send(packet(SECONDARY,0x18,0x11,[0x01,100,100,100,100,50]));   // collision detection on
     showColor();
+    if(feat.speed)startStream();
     setStatus(true,`${dev.name} ready!`);toast('Connected! Tap 🎯 Aim first.');
   }catch(e){setStatus(false,'Not connected');if(e.name!=='NotFoundError')toast('Could not connect: '+e.message)}
 }
@@ -383,6 +403,140 @@ function poll(){
 setInterval(()=>{if(padDriving&&active===null)sendDrive()},100);
 window.addEventListener('gamepadconnected',e=>toast('🎮 Controller connected!'));
 poll();
+
+/* ================= Sensor features ================= */
+
+/* --- incoming packets from BOLT --- */
+let rx=null;
+function onNotify(e){
+  const v=new Uint8Array(e.target.value.buffer);
+  for(const b of v){
+    if(b===0x8D){rx=[];continue}
+    if(!rx)continue;
+    if(b===0xD8){handlePacket(rx);rx=null;continue}
+    rx.push(b);
+  }
+}
+function handlePacket(raw){
+  const body=[];for(let i=0;i<raw.length;i++){if(raw[i]===0xAB&&i+1<raw.length){body.push(raw[++i]|0x88)}else body.push(raw[i])}
+  if(body.length<5)return;
+  const sum=body.slice(0,-1).reduce((a,b)=>a+b,0);if(((~sum)&0xFF)!==body[body.length-1])return;
+  const flags=body[0];let i=1;if(flags&0x10)i++;if(flags&0x20)i++;
+  const did=body[i++],cid=body[i++];i++;if(flags&0x01)i++;
+  const data=new Uint8Array(body.slice(i,-1)),dv=new DataView(data.buffer);
+  if(did!==0x18)return;
+  if(cid===0x12)onCrash();
+  else if(cid===0x30&&data.length>=4)onLux(dv.getFloat32(0));
+  else if(cid===0x26&&data.length>=2)onNorth(data.length>=4?dv.getInt32(0):dv.getInt16(0));
+  else if(cid===0x02&&data.length>=8)onStream(dv.getFloat32(0),dv.getFloat32(4));
+}
+
+/* --- crash reaction: surprised face + wobble --- */
+const SURPRISE=[[1,1],[2,1],[1,2],[2,2],[5,1],[6,1],[5,2],[6,2],[3,4],[4,4],[2,5],[5,5],[3,6],[4,6]];
+function onCrash(){
+  if(crashBusy||aiming)return;crashBusy=true;
+  toast('💥 Bonk!');try{navigator.vibrate&&navigator.vibrate(150)}catch(e){}
+  matrixFill([0,0,0]);SURPRISE.forEach(([x,y])=>matrixPixel(x,y,[255,220,0]));
+  const h0=heading;let n=0;
+  const w=setInterval(()=>{drive(0,(h0+(n%2?-25:25)+360)%360);if(++n>=4){clearInterval(w);drive(0,h0)}},120);
+  setTimeout(()=>{crashBusy=false;meterLevel=-1;if(!aiming)showColor()},1600);
+}
+
+/* --- night light --- */
+let luxTimer=null;
+function onLux(lux){
+  if(!feat.night)return;
+  const was=isDark;
+  if(lux<10)isDark=true;else if(lux>30)isDark=false;
+  $('tNight').title=`Night light · ${Math.round(lux)} lux`;
+  if(was!==isDark&&!aiming&&!crashBusy){showColor();toast(isDark?'🌙 Dark! Night light on':'☀️ Bright again')}
+}
+function setNight(on){
+  feat.night=on;clearInterval(luxTimer);
+  if(on){luxTimer=setInterval(()=>send(packet(SECONDARY,0x18,0x30),'lux'),1500);toast('🌙 Night light: BOLT glows when the room gets dark')}
+  else{isDark=false;if(!aiming)showColor()}
+}
+
+/* --- speed meter (BOLT streams its real velocity) --- */
+function startStream(){
+  send(packet(SECONDARY,0x18,0x0C,[0,0,0,0]));                    // extended mask off
+  send(packet(SECONDARY,0x18,0x00,[0,250,0,0,0,0,0x18]));         // velocity x+y every 250 ms
+}
+function stopStream(){send(packet(SECONDARY,0x18,0x00,[0,250,0,0,0,0,0]))}
+function onStream(vx,vy){
+  if(!feat.speed)return;
+  let sp=Math.hypot(vx,vy);if(sp>50)sp/=100;                       // m/s (accept cm/s too)
+  $('readout').textContent=`📈 ${(sp*3.6).toFixed(1)} km/h`;
+  const lvl=Math.max(0,Math.min(8,Math.round(sp/2*8)));            // 2 m/s = full bar
+  if(lvl!==meterLevel&&!aiming&&!crashBusy){
+    meterLevel=lvl;matrixFill([0,0,0]);
+    for(let r=0;r<lvl;r++){const y=7-r,c=r<3?[40,220,80]:r<6?[255,200,0]:[255,50,50];matrixRect(0,y,7,y,c)}
+  }
+}
+function setSpeed(on){
+  feat.speed=on;meterLevel=-1;
+  if(on){startStream();toast('📈 Speed meter on BOLT\'s screen')}
+  else{stopStream();show(0,heading);if(!aiming)showColor()}
+}
+
+/* --- tilt to steer --- */
+let tiltZero=null,tiltRaw=null,tiltDriving=false;
+const orientAngle=()=>turned.matches?90:((screen.orientation&&screen.orientation.angle)??window.orientation??0);
+function screenTilt(b,g){const a=((orientAngle()%360)+360)%360;return a===90?{x:b,y:g}:a===270?{x:-b,y:-g}:a===180?{x:-g,y:-b}:{x:g,y:b}}
+function onOrient(e){
+  if(e.beta==null)return;tiltRaw=screenTilt(e.beta,e.gamma);
+  if(!tiltZero)tiltZero=tiltRaw;
+}
+async function askMotion(){
+  try{if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){return (await DeviceOrientationEvent.requestPermission())==='granted'}}catch(e){return false}
+  return 'DeviceOrientationEvent' in window;
+}
+async function setTilt(on){
+  if(on){
+    if(!await askMotion()){toast('Motion sensors not allowed on this device');return false}
+    tiltZero=null;window.addEventListener('deviceorientation',onOrient);
+    toast('📱 Hold it how you like, then tilt to drive');
+  }else{
+    window.removeEventListener('deviceorientation',onOrient);
+    if(tiltDriving){tiltDriving=false;vec={x:0,y:0};knob.style.transform='';drive(0,heading)}
+  }
+  feat.tilt=on;return true;
+}
+setInterval(()=>{
+  if(!feat.tilt||!tiltRaw||!tiltZero||active!==null||padDriving||aiming)return;
+  let x=(tiltRaw.x-tiltZero.x)/25,y=(tiltRaw.y-tiltZero.y)/25;const m=Math.hypot(x,y);
+  if(m>1){x/=m;y/=m}
+  if(m>0.2){vec={x,y};tiltDriving=true;const R=stick.clientWidth/2;knob.style.transform=`translate(${x*R*0.6}px,${y*R*0.6}px)`;sendDrive()}
+  else if(tiltDriving){tiltDriving=false;vec={x:0,y:0};knob.style.transform='';drive(0,heading)}
+},100);
+
+/* --- toggles --- */
+function bindTog(id,fn){const b=$(id);b.onclick=async()=>{const on=b.getAttribute('aria-pressed')!=='true';if(on&&!api&&id!=='tTilt'){toast('Connect BOLT first');return}const ok=await fn(on);if(ok!==false)b.setAttribute('aria-pressed',on)}}
+bindTog('tNight',setNight);bindTog('tSpeed',setSpeed);bindTog('tTilt',setTilt);
+
+/* --- auto-aim with compass --- */
+let facing=null,northWait=null;
+function onCompass(e){
+  let h=null;
+  if(typeof e.webkitCompassHeading==='number')h=e.webkitCompassHeading;
+  else if(e.absolute&&e.alpha!=null)h=360-e.alpha;
+  if(h!=null)facing=(h+orientAngle()+360)%360;    // direction the player is facing
+}
+function onNorth(yaw){
+  if(!northWait)return;clearTimeout(northWait);northWait=null;
+  aimBase=0;
+  if(facing!=null){setAim(yaw+facing);toast('🧭 Aimed using the compass! Fine-tune, then Done')}
+  else{setAim(yaw);toast('🧭 BOLT is facing north. Turn the dial to fine-tune')}
+  leds(0x3F,[0,0,0,0,0,255]);aimArrow();
+}
+$('autoAim').onclick=async()=>{
+  if(!api){toast('Connect BOLT first');return}
+  if(await askMotion()){window.addEventListener('deviceorientationabsolute',onCompass);window.addEventListener('deviceorientation',onCompass)}
+  toast('🧭 BOLT is spinning to find north…');
+  send(packet(SECONDARY,0x18,0x25));
+  clearTimeout(northWait);northWait=setTimeout(()=>{northWait=null;toast('Compass didn\'t answer. Keep BOLT away from metal and try again')},20000);
+};
+
 }
 </script>
 </body>

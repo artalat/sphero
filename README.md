@@ -21,6 +21,13 @@ A game-controller style web app for driving a Sphero BOLT over Bluetooth, right 
 | 🐢 🐇 🚀 | Speed mode |
 | 💬 | Scroll a message |
 
+| 🧭 Auto-aim (in Aim) | Uses BOLT's compass + the tablet's compass to set "forward" |
+| 🌙 Night | BOLT's screen glows warm white when the room gets dark (light sensor) |
+| 📈 Speed | Live speed from BOLT's sensors, shown in the app and as a bar on BOLT |
+| 📱 Tilt | Steer by tilting the phone or tablet |
+
+BOLT reacts to crashes automatically with a surprised face and a wobble.
+
 Physical Xbox / PlayStation / Switch controllers work via the Gamepad API.
 
 ## Deploy
